@@ -1,0 +1,29 @@
+- connection-write:
+    host: put-host-ip-address-here
+    port: 5433
+    user: put-db-username-here
+    password: put-db-password-here
+    database: put-db-name-here
+    read_timeout: 600       # 10 min timeout on queries
+    unicode_error: strict   # default throw error on invalid UTF-8 results
+    ssl: False              # SSL is disabled by default
+
+- schema-write: put-schema-name-here  # the schema to use when writing to the Vertica database
+
+- delimiter: "|"              # delimiter character to separate columns
+
+- parent-data-folder: /output
+
+- tables-to-write:
+    tables:
+    tables:
+        - f_fact_table1
+        - f_fact_table2
+
+- tables-to-write:
+    tables:
+        - d_dimension_table1
+        - d_dimension_table2
+
+
+

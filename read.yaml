@@ -1,0 +1,34 @@
+- connection-read:
+    host: put-host-ip-address-here
+    port: 5433
+    user: put-db-username-here
+    password: put-db-password-here
+    database: put-db-name-here
+    read_timeout: 600       # 10 min timeout on queries
+    unicode_error: strict   # default throw error on invalid UTF-8 results
+    ssl: False              # SSL is disabled by default
+
+- schema-read: put-schema-name-here          # schema to use when accessing the Vertica database
+
+- delimiter: "|"            # delimiter character to separate columns
+
+- parent-data-folder: /output
+
+- write-database-ddl: True
+
+- tables-to-read:
+    tables:
+        - f_fact_table1
+        - f_fact_table2
+    # note - to read 5 min of data, set start and end times to same timestamp. Times are inclusive.
+    start-time: 2017-06-08 19:20:00
+    end-time: 2017-06-08 19:20:00
+
+- tables-to-read:
+    tables:
+        - d_dimension_table1
+        - d_dimension_table2
+    # no need to define start and end time since getting all data from dimension tables
+
+
+
