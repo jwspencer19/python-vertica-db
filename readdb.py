@@ -1,124 +1,53 @@
 # Spencer
 # Python program to read data from Vertica database tables and write to CSV files
 
-import vertica_python
-from vertica_python import errors as vperrs
-
 import os
-import string
+import sys
+import myverticadb
+import myyaml
 
 
 def main():
-    # connection info for Vertica database
-    conn_info = {'host': 'put-host-ip-here',
-                 'port': 5433,
-                 'user': 'db-user-here',
-                 'password': 'password-here',
-                 'database': 'database-here',
-                 # 10 minutes timeout on queries
-                 'read_timeout': 600,
-                 # default throw error on invalid UTF-8 results
-                 'unicode_error': 'strict',
-                 # SSL is disabled by default
-                 'ssl': False}
+    if (len(sys.argv) == 2):
+        yamlInputFile = sys.argv[1]
+    else:
+        yamlInputFile = "read.yaml"
 
-    # search_path contains the schema to use when accessing the Vertica database
-    search_path = "search-path-here"
+    if not os.path.exists(yamlInputFile):
+        print("Error: yaml input file not found: " + yamlInputFile)
+        quit()
 
-    cur = connectToDatabase(search_path, **conn_info)
+    myyaml.readYamlFile(yamlInputFile)
+    conn_info = myyaml.search('connection-read')
+    if conn_info is None:
+        print("Error: No connection-read defined in " + yamlInputFile)
+        quit()
 
-#    getDDLforDatabaseTables(search_path, cur)
+    # schema_read contains the schema to use when accessing the Vertica database
+    schema_read = myyaml.search('schema-read')
+    if (schema_read is None):
+        print("Error: No schema-read defined in " + yamlInputFile)
+        quit()
 
-    createCSVforDatabaseTables(search_path, cur)
+    cur = myverticadb.connectToDatabase(schema_read, **conn_info)
+    if cur:
+        parent_folder = myyaml.search('parent-data-folder')
+        if parent_folder is None:
+            parent_folder = "."
 
+        write_database_ddl = myyaml.search('write-database-ddl')
+        if write_database_ddl:
+            myverticadb.getDDLforDatabaseTables(schema_read, cur, parent_folder)
 
-def connectToDatabase(search_path, **conn_info):
-    """
-    Connect to Vertica database
-    :param search_path: the search path that contains the schema name to connect to the database
-    :param conn_info: database connection information
-    :return: cursor object to database
-    """
+        delimiter = myyaml.search('delimiter')
+        if delimiter is None:
+            delimiter = ","
 
-    connection = vertica_python.connect(**conn_info)
-
-    # "dict" option returns querys as a list of dictionaries
-    cur = connection.cursor('dict')
-
-    cur.execute("SET SEARCH_PATH TO " + search_path)
-
-    return cur
-
-
-def getDDLforDatabaseTables(search_path, cur):
-    """
-    Get and write out the DDL for each table
-
-    :param search_path: the search path that contains the schema name to connect to the database
-    :param cur: the cursor to use when executing SQL
-    :return: none
-    """
-
-    table_names = []
-
-    # get table list
-    cur.execute("select distinct table_name from columns where table_schema = '" + search_path + "' order by table_name")
-
-    rows = cur.fetchall()
-
-    currentdir = os.getcwd()
-    ddl_dir = currentdir + "/ddl"
-
-    try:
-        os.mkdir(ddl_dir)
-    except:
-        pass
-
-    for item in rows:
-        table_names.append(item['table_name'])
-
-    for item in table_names:
-        cur.execute("select export_objects('','" + item + "')")
-        sqldump = cur.fetchall()
-        table_ddl = sqldump[0]['export_objects']
-        table_ddl = table_ddl.replace(search_path + ".", "")
-        outfile = open(ddl_dir + "/" + item + ".ddl", "wb")
-        outfile.write(table_ddl)
-        outfile.close
-
-    return
-
-
-def createCSVforDatabaseTables(search_path, cur):
-
-    cur.execute("select * from f_ksi")
-    sqlresult = cur.fetchall()
-
-    f = open("table-name.csv", "w+")
-
-    # get first row to extract the column headers once
-    row = sqlresult[0]
-
-#    for k, v in row.items():
-#        print(k, v)
-
-#    for k in row:
-#        print(k)
-
-    # create string of comma separate column headers
-    header = ",".join(row)
-#    print header
-    f.write(header + "\n")
-
-    for row in sqlresult:
-        # create string of comma separate values for a row of data
-        values = ",".join(["%s" % (v) for k, v in row.items()])
-        f.write(values + "\n")
-#        print values
-
-    f.close()
-
-    return
+        read_tables = myyaml.searchMultiple('tables-to-read')
+        if read_tables:
+            myverticadb.createCSVforDatabaseTables(cur, delimiter, parent_folder, read_tables)
+        else:
+            print("No tables-to-read defined")
 
 
 if __name__=="__main__":
