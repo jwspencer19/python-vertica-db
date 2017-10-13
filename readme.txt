@@ -21,6 +21,8 @@ $ python writedb.py
 To delete data from a set of Vertica database tables, execute:
 $ python deletedb.py
 
+To compare two folders containing DDL files
+$ python diff_ddls.py first-ddl-folder second-ddl-folder
 
 To build a Docker image that contains Python and the two libraries needed to
 run these Python scripts:
